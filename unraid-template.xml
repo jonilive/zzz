@@ -9,13 +9,13 @@
 <Container version="2">
   <Name>zzz</Name>
   <Repository>ghcr.io/yourusername/zzz:latest</Repository>
-  <Registry>https://github.com/yourusername/zzz</Registry>
+  <Registry>https://github.com/jonilive/zzz</Registry>
   <Network>bridge</Network>
   <MyIP></MyIP>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support>https://github.com/yourusername/zzz/issues</Support>
-  <Project>https://github.com/yourusername/zzz</Project>
+  <Support>https://github.com/jonilive/zzz/issues</Support>
+  <Project>https://github.com/jonilive/zzz</Project>
   <Overview>
     ZZZ - A secure file gallery application with client-side encryption/decryption.
     
@@ -30,7 +30,7 @@
   <Category>MediaServer:Photos MediaServer:Other</Category>
   <WebUI>http://[IP]:[PORT:3000]</WebUI>
   <TemplateURL></TemplateURL>
-  <Icon>https://raw.githubusercontent.com/jonilive/zzz/main/public/favicon.ico</Icon>
+  <Icon>https://raw.githubusercontent.com/jonilive/zzz/master/public/favicon.ico</Icon>
   <ExtraParams></ExtraParams>
   <PostArgs></PostArgs>
   <CPUset></CPUset>
