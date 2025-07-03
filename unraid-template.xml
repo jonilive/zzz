@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>zzz</Name>
+  <Repository>ghcr.io/yourusername/zzz:latest</Repository>
+  <Registry>https://github.com/yourusername/zzz</Registry>
+  <Network>bridge</Network>
+  <MyIP></MyIP>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/yourusername/zzz/issues</Support>
+  <Project>https://github.com/yourusername/zzz</Project>
+  <Overview>
+    ZZZ - A secure file gallery application with client-side encryption/decryption.
+    
+    Features:
+    - PIN authentication
+    - Client-side encryption/decryption
+    - Responsive design for mobile devices
+    - Support for viewing images and videos
+    - File upload (up to 100MB) and deletion functionality
+    - Folder organization with navigation
+  </Overview>
+  <Category>MediaServer:Photos MediaServer:Other</Category>
+  <WebUI>http://[IP]:[PORT:3000]</WebUI>
+  <TemplateURL></TemplateURL>
+  <Icon>https://raw.githubusercontent.com/yourusername/zzz/main/public/favicon.ico</Icon>
+  <ExtraParams></ExtraParams>
+  <PostArgs></PostArgs>
+  <CPUset></CPUset>
+  <DateInstalled>1656835200</DateInstalled>
+  <DonateText></DonateText>
+  <DonateLink></DonateLink>
+  <Requires></Requires>
+  <Config Name="WebUI Port" Target="3000" Default="3000" Mode="tcp" Description="Port for ZZZ WebUI" Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="Data Storage" Target="/data/uploads" Default="/mnt/user/appdata/zzz" Mode="rw" Description="Path for ZZZ's encrypted file storage" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/zzz</Config>
+</Container>

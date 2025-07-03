@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZZZ - Login</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="auth-container">
+            <h1>ZZZ</h1>
+            <p>Enter your PIN to access your gallery.</p>
+            
+            <form id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="pin">PIN:</label>
+                    <input type="password" id="pin" name="pin" placeholder="Enter PIN" required>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn primary-btn">Login</button>
+                </div>
+            </form>
+            <div id="message" class="message"></div>
+        </div>
+    </div>
+
+    <script src="/js/crypto.js"></script>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const pin = document.getElementById('pin').value;
+            const message = document.getElementById('message');
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ pin })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    message.textContent = 'Login successful. Redirecting...';
+                    message.className = 'message success';
+                    
+                    // Generate encryption key from PIN and store it for the session
+                    const encryptionKey = await generateEncryptionKey(pin);
+                    sessionStorage.setItem('encryptionKey', encryptionKey);
+                    
+                    // Redirect to gallery page after 1 second
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    message.textContent = data.message || 'Invalid PIN';
+                    message.className = 'message error';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                message.textContent = 'An error occurred';
+                message.className = 'message error';
+            }
+        });
+    </script>
+</body>
+</html>

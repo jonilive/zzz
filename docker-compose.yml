@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  zzz:
+    build: .
+    container_name: zzz
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - UPLOADS_DIR=/data/uploads
+    volumes:
+      - ./uploads:/data/uploads
+    restart: unless-stopped

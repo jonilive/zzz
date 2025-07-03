@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZZZ</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="gallery-header">
+            <h1>ZZZ</h1>
+            <div class="header-actions">
+                <button id="upload-btn" class="btn primary-btn"><span class="icon">📤</span> Upload</button>
+                <button id="new-folder-btn" class="btn primary-btn"><span class="icon">📁</span> New Folder</button>
+                <button id="logout-btn" class="btn secondary-btn"><span class="icon">🚪</span> Logout</button>
+            </div>
+        </header>
+        
+        <div class="gallery-container">
+            <!-- Breadcrumb Navigation -->
+            <div id="breadcrumb" class="breadcrumb">
+                <!-- Breadcrumb links will be added here dynamically -->
+            </div>
+            
+            <div class="filters">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="image">Images</button>
+                <button class="filter-btn" data-filter="video">Videos</button>
+            </div>
+            
+            <div id="file-container" class="file-container">
+                <!-- Files will be loaded here dynamically -->
+                <div class="loading">Loading files...</div>
+            </div>
+        </div>
+        
+        <!-- File preview modal -->
+        <div id="preview-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="preview-container"></div>
+            </div>
+        </div>
+        
+        <!-- Upload modal -->
+        <div id="upload-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Upload Files</h2>
+                <form id="upload-form" class="upload-form">
+                    <div class="form-group">
+                        <label for="file-input" class="file-label">
+                            <div class="drop-area" id="drop-area">
+                                <span class="icon large-icon">📁</span>
+                                <p>Drag & drop files here or click to browse</p>
+                                <p class="small">Max file size: 100MB</p>
+                            </div>
+                            <input type="file" id="file-input" name="file" class="file-input" accept="image/*,video/*">
+                        </label>
+                    </div>
+                    <div class="upload-progress" id="upload-progress">
+                        <div class="progress-bar" id="progress-bar"></div>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn primary-btn" id="upload-submit-btn">Upload</button>
+                    </div>
+                </form>
+                <div id="upload-message" class="message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates -->
+    <template id="file-template">
+        <div class="file-item" data-type="">
+            <div class="file-preview">
+                <div class="thumbnail loading"></div>
+            </div>
+            <div class="file-info">
+                <p class="file-name"></p>
+                <p class="file-size"></p>
+            </div>
+            <div class="file-actions">
+                <button class="btn small-btn view-btn"><span class="icon">👁️</span></button>
+                <button class="btn small-btn delete-btn"><span class="icon">🗑️</span></button>
+            </div>
+        </div>
+    </template>
+
+    <script src="/js/crypto.js"></script>
+    <script src="/js/gallery.js"></script>
+</body>
+</html>

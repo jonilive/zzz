@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZZZ - Setup</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="auth-container">
+            <h1>ZZZ Setup</h1>
+            <p>Create a PIN to secure your gallery. You'll need this PIN to access your files.</p>
+            
+            <form id="setup-form" class="auth-form">
+                <div class="form-group">
+                    <label for="pin">Create PIN:</label>
+                    <input type="password" id="pin" name="pin" placeholder="Enter PIN" required minlength="4">
+                </div>
+                <div class="form-group">
+                    <label for="confirm-pin">Confirm PIN:</label>
+                    <input type="password" id="confirm-pin" name="confirm-pin" placeholder="Confirm PIN" required minlength="4">
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn primary-btn">Set PIN</button>
+                </div>
+            </form>
+            <div id="message" class="message"></div>
+        </div>
+    </div>
+
+    <script src="/js/crypto.js"></script>
+    <script>
+        document.getElementById('setup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const pin = document.getElementById('pin').value;
+            const confirmPin = document.getElementById('confirm-pin').value;
+            const message = document.getElementById('message');
+            
+            if (pin !== confirmPin) {
+                message.textContent = 'PINs do not match';
+                message.className = 'message error';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/setup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ pin })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    message.textContent = 'PIN set successfully. Redirecting...';
+                    message.className = 'message success';
+                    
+                    // Generate and store encryption key derived from the PIN
+                    // This key will be used for client-side encryption/decryption
+                    const encryptionKey = await generateEncryptionKey(pin);
+                    localStorage.setItem('encryptionKey', encryptionKey);
+                    
+                    // Redirect to login page after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                } else {
+                    message.textContent = data.message || 'Failed to set PIN';
+                    message.className = 'message error';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                message.textContent = 'An error occurred';
+                message.className = 'message error';
+            }
+        });
+    </script>
+</body>
+</html>
