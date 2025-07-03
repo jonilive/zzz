@@ -59,7 +59,7 @@ docker run -d \
 ## 📦 Unraid Installation
 
 1. Go to **Community Applications** in Unraid
-2. Search for "ZZZ" or use this template URL: `https://raw.githubusercontent.com/jonilive/zzz/main/unraid-template.xml`
+2. Search for "ZZZ" or use this template URL: `https://raw.githubusercontent.com/jonilive/zzz/master/unraid-template.xml`
 3. Configure the paths and ports as needed
 4. Install and start the container
 
@@ -69,7 +69,7 @@ If the community application isn't available yet:
 
 1. Go to **Docker** tab in Unraid
 2. Click **Add Container**
-3. Set **Template**: `https://raw.githubusercontent.com/jonilive/zzz/main/unraid-template.xml`
+3. Set **Template**: `https://raw.githubusercontent.com/jonilive/zzz/master/unraid-template.xml`
 
 ## 🔧 Configuration
 
