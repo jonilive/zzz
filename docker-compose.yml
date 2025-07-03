@@ -10,5 +10,8 @@ services:
       - PORT=3000
       - UPLOADS_DIR=/data/uploads
     volumes:
-      - ./uploads:/data/uploads
+      - zzz-data:/data/uploads
     restart: unless-stopped
+
+volumes:
+  zzz-data:
