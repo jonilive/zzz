@@ -1,13 +1,6 @@
-<?x  <Repository>ghcr.io/jonilive/zzz:latest</Repository>
-  <Registry>https://github.com/jonilive/zzz</Registry>
-  <Network>bridge</Network>
-  <MyIP></MyIP>
-  <Shell>sh</Shell>
-  <Privileged>false</Privileged>
-  <Support>https://github.com/jonilive/zzz/issues</Support>
-  <Project>https://github.com/jonilive/zzz</Project>on="1.0"?>
+<?xml version="1.0"?>
 <Container version="2">
-  <Name>zzz</Name>
+  <n>zzz</n>
   <Repository>ghcr.io/jonilive/zzz:latest</Repository>
   <Registry>https://github.com/jonilive/zzz</Registry>
   <Network>bridge</Network>
