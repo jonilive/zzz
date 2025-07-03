@@ -8,7 +8,7 @@
   <Project>https://github.com/jonilive/zzz</Project>on="1.0"?>
 <Container version="2">
   <Name>zzz</Name>
-  <Repository>ghcr.io/yourusername/zzz:latest</Repository>
+  <Repository>ghcr.io/jonilive/zzz:latest</Repository>
   <Registry>https://github.com/jonilive/zzz</Registry>
   <Network>bridge</Network>
   <MyIP></MyIP>
