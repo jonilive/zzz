@@ -1,170 +1,163 @@
-# ZZZ
+# ZZZ - Secure File Gallery
 
-A secure file gallery application built with Node.js, featuring client-side encryption/decryption. Can be deployed natively or using Docker/Unraid.
+A secure, self-hosted file gallery application with client-side encryption and PIN authentication. Perfect for storing and viewing sensitive photos, videos, and documents.
 
-## Features
+## 🔐 Security Features
 
-- Responsive design for mobile devices
-- PIN authentication for secure access
-- Client-side file encryption/decryption
-- Support for viewing images and videos
-- File upload (up to 100MB) and deletion functionality
-- Folder organization with navigation
-- First-run setup for PIN creation
-- File and folder name obfuscation using Caesar cipher
+- **Client-side encryption/decryption** - Files are encrypted in your browser before upload
+- **PIN authentication** - Secure access control
+- **Filename obfuscation** - Original filenames are encrypted on the server
+- **No server-side key storage** - Keys are derived from your PIN and never stored
 
-## Security Features
+## ✨ Features
 
-- Files are encrypted on the client-side before upload
-- Files are decrypted on the client-side for viewing
-- PIN is stored as a hashed value using bcrypt in a hidden file
-- Authentication with secure HTTP-only cookies
-- File and folder names are obfuscated using a Caesar cipher with PIN-derived key
+- 📱 **Responsive design** - Works perfectly on mobile devices
+- 🖼️ **Media support** - View images and videos directly in the browser
+- 📁 **Folder organization** - Create and navigate through folders
+- ⬆️ **File upload** - Support for files up to 100MB
+- 🗑️ **File management** - Upload, view, and delete files
+- 🔒 **Session security** - Automatic logout and session management
 
-## Requirements
+## 🚀 Quick Start with Docker
 
-- Node.js 14.x or higher
-- Modern web browser with JavaScript enabled
+### Docker Compose (Recommended)
 
-## Installation
+1. Create a `docker-compose.yml` file:
+```yaml
+version: '3'
 
-1. Clone the repository
-```
-git clone https://github.com/yourusername/zzz.git
-cd zzz
-```
-
-2. Install dependencies
-```
-npm install
-```
-
-3. Create a `.env` file (or use the provided one)
-```
-PORT=3000
+services:
+  zzz:
+    image: ghcr.io/jonilive/zzz:latest
+    container_name: zzz
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - UPLOADS_DIR=/data/uploads
+    volumes:
+      - ./zzz-data:/data/uploads
+    restart: unless-stopped
 ```
 
-4. Start the application
-```
-npm start
-```
-
-5. Open your browser and navigate to:
-```
-http://localhost:3000
-```
-
-6. Follow the setup process to create a PIN on first run
-
-## Development
-
-To run the application in development mode with auto-restart:
-```
-npm run dev
-```
-
-## Usage
-
-1. First-time setup: Create a PIN for authentication
-2. Login with your PIN
-3. View, upload, and delete files in the gallery
-4. Create folders to organize your files
-5. Navigate through folders using the breadcrumb navigation
-6. Filter files by type (images, videos, all)
-7. Click on a file to preview it
-8. Use the logout button when finished
-
-## Technical Details
-
-- **Backend**: Node.js with Express
-- **Authentication**: PIN-based with bcrypt for hashing
-- **Encryption**: Client-side AES encryption using CryptoJS
-- **File Storage**: Local storage in the 'uploads' directory
-- **Responsive UI**: Modern CSS with responsive design for mobile devices
-
-## Important Notes
-
-- This application is designed to be used locally and runs on HTTP
-- All files are encrypted using a key derived from your PIN
-- If you forget your PIN, you will not be able to decrypt your files
-- Maximum file size for upload is 100MB
-
-## Docker Deployment
-
-### Using Docker Compose (Recommended)
-
-1. Make sure Docker and Docker Compose are installed on your system
-2. Clone the repository or download the source code
-3. Navigate to the project directory
-4. Run the application with Docker Compose:
-
+2. Run the container:
 ```bash
 docker-compose up -d
 ```
 
-5. Access ZZZ at `http://localhost:3000`
-6. To stop the container:
-
-```bash
-docker-compose down
-```
-
-### Using Docker Directly
-
-1. Build the Docker image:
-
-```bash
-docker build -t zzz .
-```
-
-2. Run the container:
+### Docker Run
 
 ```bash
 docker run -d \
   --name zzz \
   -p 3000:3000 \
-  -v $(pwd)/uploads:/data/uploads \
-  zzz
+  -v ./zzz-data:/data/uploads \
+  -e UPLOADS_DIR=/data/uploads \
+  ghcr.io/jonilive/zzz:latest
 ```
 
-3. Access ZZZ at `http://localhost:3000`
+## 📦 Unraid Installation
 
-### Configuration Options
+1. Go to **Community Applications** in Unraid
+2. Search for "ZZZ" or use this template URL: `https://raw.githubusercontent.com/jonilive/zzz/main/unraid-template.xml`
+3. Configure the paths and ports as needed
+4. Install and start the container
 
-The Docker container can be configured using the following environment variables:
+### Manual Unraid Template
 
-- `PORT`: The port the application runs on (default: 3000)
-- `UPLOADS_DIR`: The directory where files are stored (default: /data/uploads)
+If the community application isn't available yet:
 
-Example with custom port:
+1. Go to **Docker** tab in Unraid
+2. Click **Add Container**
+3. Set **Template**: `https://raw.githubusercontent.com/jonilive/zzz/main/unraid-template.xml`
+
+## 🔧 Configuration
+
+### Environment Variables
+
+- `PORT` - Web interface port (default: 3000)
+- `UPLOADS_DIR` - Directory for encrypted file storage (default: /data/uploads)
+- `NODE_ENV` - Application environment (default: production)
+
+### Initial Setup
+
+1. Access the web interface at `http://your-server:3000`
+2. You'll be prompted to set up an initial PIN
+3. Remember your PIN - it cannot be recovered if lost!
+4. Start uploading and organizing your files
+
+## 🏗️ Development
+
+### Prerequisites
+
+- Node.js 18 or higher
+- npm
+
+### Local Development
+
+1. Clone the repository:
+```bash
+git clone https://github.com/jonilive/zzz.git
+cd zzz
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Create uploads directory:
+```bash
+mkdir uploads
+```
+
+4. Start the development server:
+```bash
+npm run dev
+```
+
+5. Open http://localhost:3000
+
+### Building Docker Image
 
 ```bash
-docker run -d \
-  --name zzz \
-  -p 8080:8080 \
-  -e PORT=8080 \
-  -v $(pwd)/uploads:/data/uploads \
-  zzz
+docker build -t zzz .
 ```
 
-## Unraid Deployment
+## 📁 File Structure
 
-To deploy ZZZ on Unraid:
+```
+zzz/
+├── public/              # Static web assets
+│   ├── css/            # Stylesheets
+│   └── js/             # Client-side JavaScript
+├── views/              # HTML templates
+├── uploads/            # Encrypted file storage (created automatically)
+├── server.js           # Main application server
+├── Dockerfile          # Docker configuration
+├── docker-compose.yml  # Docker Compose configuration
+└── unraid-template.xml # Unraid template
+```
 
-1. Navigate to the Docker tab in your Unraid web interface
-2. Click "Add Container"
-3. Fill in the following details:
-   - Repository: `yourusername/zzz` (or use a custom built image)
-   - Network Type: Bridge
-   - Port Mappings: `3000:3000`
-   - Add the following Path:
-     - Host Path: `/mnt/user/appdata/zzz` (or your preferred location)
-     - Container Path: `/data/uploads`
-     - Access Mode: Read/Write
-4. Click "Apply" to create and start the container
+## 🔒 Security Notes
 
-For a more user-friendly installation, a Community Applications template may be available in the future.
+- **PIN Security**: Choose a strong PIN. The security of your files depends on it.
+- **HTTPS**: Use HTTPS in production (configure with a reverse proxy like Nginx or Traefik)
+- **Backup**: Regularly backup your encrypted files and remember your PIN
+- **Access Control**: Ensure the application is not publicly accessible unless intended
 
-## License
+## 🤝 Contributing
 
-ISC
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## ⚠️ Disclaimer
+
+This software is provided as-is. Always maintain backups of important data and test the application thoroughly in your environment before relying on it for critical files.

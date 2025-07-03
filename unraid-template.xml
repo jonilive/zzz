@@ -1,4 +1,11 @@
-<?xml version="1.0"?>
+<?x  <Repository>ghcr.io/jonilive/zzz:latest</Repository>
+  <Registry>https://github.com/jonilive/zzz</Registry>
+  <Network>bridge</Network>
+  <MyIP></MyIP>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/jonilive/zzz/issues</Support>
+  <Project>https://github.com/jonilive/zzz</Project>on="1.0"?>
 <Container version="2">
   <Name>zzz</Name>
   <Repository>ghcr.io/yourusername/zzz:latest</Repository>
@@ -23,7 +30,7 @@
   <Category>MediaServer:Photos MediaServer:Other</Category>
   <WebUI>http://[IP]:[PORT:3000]</WebUI>
   <TemplateURL></TemplateURL>
-  <Icon>https://raw.githubusercontent.com/yourusername/zzz/main/public/favicon.ico</Icon>
+  <Icon>https://raw.githubusercontent.com/jonilive/zzz/main/public/favicon.ico</Icon>
   <ExtraParams></ExtraParams>
   <PostArgs></PostArgs>
   <CPUset></CPUset>
