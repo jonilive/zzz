@@ -91,8 +91,6 @@
             submitBtn.textContent = 'Setting up...';
             
             try {
-                console.log('Starting setup request...');
-                
                 const response = await fetch('/api/setup', {
                     method: 'POST',
                     headers: {
@@ -101,13 +99,9 @@
                     body: JSON.stringify({ pin })
                 });
                 
-                console.log('Setup response status:', response.status);
                 const data = await response.json();
-                console.log('Setup response data:', data);
                 
                 if (data.success) {
-                    console.log('Setup successful, generating encryption key...');
-                    
                     // Check if CryptoJS is available
                     if (typeof CryptoJS === 'undefined') {
                         throw new Error('CryptoJS library not loaded');

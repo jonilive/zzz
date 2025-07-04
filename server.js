@@ -284,14 +284,6 @@ const upload = multer({
     limits: { fileSize: 120 * 1024 * 1024 } // 120MB limit to account for encryption overhead
 });
 
-// Debug middleware to log raw request body
-app.use('/api/setup', (req, res, next) => {
-    console.log('Raw request headers:', req.headers);
-    console.log('Raw request body type:', typeof req.body);
-    console.log('Raw request body:', req.body);
-    next();
-});
-
 // Routes
 app.get('/', checkAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'index.html'));
@@ -315,7 +307,6 @@ app.get('/setup', (req, res) => {
 
 // API Routes
 app.post('/api/setup', async (req, res) => {
-    console.log('Setup request received:', req.body);
     const { pin } = req.body;
     
     if (!pin || pin.length < 4) {
@@ -339,23 +330,18 @@ app.post('/api/setup', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
-    console.log('Login request received:', req.body);
     const { pin } = req.body;
     
     if (!pin) {
-        console.log('No PIN provided');
         return res.status(400).json({ success: false, message: 'PIN is required' });
     }
     
     try {
         // Read the saved hashed PIN from the hidden file
         const savedData = JSON.parse(fs.readFileSync(PIN_FILE));
-        console.log('Saved PIN hash:', savedData.pin);
-        console.log('Input PIN:', pin);
         
         // Compare the PINs
         const match = await bcrypt.compare(pin, savedData.pin);
-        console.log('PIN match:', match);
         
         if (match) {
             // Set authentication cookie (1 hour expiration)
