@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Setup</title>
+</head>
+<body>
+    <h1>Debug Setup Request</h1>
+    <button onclick="testSetup()">Test Setup Request</button>
+    <div id="result"></div>
+    
+    <script>
+        async function testSetup() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                console.log('Starting setup request...');
+                resultDiv.innerHTML = '<p>Starting setup request...</p>';
+                
+                const response = await fetch('/api/setup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ pin: '1234' })
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                resultDiv.innerHTML += `<p>Response status: ${response.status}</p>`;
+                
+                const text = await response.text();
+                console.log('Response text:', text);
+                
+                resultDiv.innerHTML += `<p>Response text: ${text}</p>`;
+                
+                // Try to parse as JSON
+                try {
+                    const data = JSON.parse(text);
+                    resultDiv.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } catch (jsonError) {
+                    resultDiv.innerHTML += `<p>JSON parse error: ${jsonError.message}</p>`;
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

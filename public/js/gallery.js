@@ -1,6 +1,6 @@
 /**
  * Main gallery JavaScript file
- * Handles file display, filtering, upload, preview, and deletion
+ * Handles file display, upload, preview, and deletion
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,16 +8,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileContainer = document.getElementById('file-container');
     const uploadBtn = document.getElementById('upload-btn');
     const logoutBtn = document.getElementById('logout-btn');
-    const filterBtns = document.querySelectorAll('.filter-btn');
     const uploadModal = document.getElementById('upload-modal');
     const previewModal = document.getElementById('preview-modal');
     const fileTemplate = document.getElementById('file-template');
     
-    // Current filter
-    let currentFilter = 'all';
-    
     // Current directory path (empty string means root)
     let currentPath = '';
+    
+    // Pagination variables
+    let currentPage = 1;
+    let totalPages = 1;
+    let totalFiles = 0;
+    const filesPerPage = 20; // 20 files per page
     
     // Check if we have an encryption key in sessionStorage
     const encryptionKey = sessionStorage.getItem('encryptionKey');
@@ -35,24 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('new-folder-btn').addEventListener('click', openCreateFolderModal);
     logoutBtn.addEventListener('click', handleLogout);
     
-    // Filter buttons
-    filterBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const filter = btn.getAttribute('data-filter');
-            
-            // Update active button
-            filterBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            // Apply filter
-            currentFilter = filter;
-            applyFilter(filter);
-        });
-    });
-    
     // Close modal buttons
     document.querySelectorAll('.modal .close').forEach(closeBtn => {
-        closeBtn.addEventListener('click', () => {
+        closeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
             const modal = closeBtn.closest('.modal');
             
             // Clean up blob URLs when closing preview modal
@@ -60,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cleanupPreviewModal();
             }
             
+            // Close modal immediately
             modal.style.display = 'none';
         });
     });
@@ -134,18 +123,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Load files function
-    async function loadFiles(path = null) {
+    async function loadFiles(path = null, page = 1) {
         try {
             // If path is provided, use it; otherwise, use currentPath
             if (path !== null) {
                 currentPath = path;
+                currentPage = 1; // Reset to first page when changing directories
+            } else {
+                currentPage = page;
             }
             
-            // Update URL with query parameter
+            // Show loading state
+            fileContainer.innerHTML = '<div class="loading">Loading files...</div>';
+            
+            // Hide pagination during loading
+            const paginationEl = document.getElementById('pagination-controls');
+            if (paginationEl) {
+                paginationEl.style.display = 'none';
+            }
+            
+            // Update URL with query parameters
             const url = new URL('/api/files', window.location.origin);
             if (currentPath) {
                 url.searchParams.append('path', currentPath);
             }
+            url.searchParams.append('page', currentPage);
+            url.searchParams.append('filesPerPage', filesPerPage);
             
             // If we're changing directories, validate the path first
             if (path !== null && path !== '') {
@@ -172,11 +175,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             
             if (data.success) {
+                // Update pagination info
+                totalFiles = data.totalFiles || 0;
+                totalPages = data.totalPages || 1;
+                currentPage = data.currentPage || 1;
+                
                 // Update the breadcrumb navigation
                 updateBreadcrumb(data.currentPath, data.isRoot, data.parentPath);
                 
                 // Display files and folders
                 displayFiles(data.files);
+                
+                // Update pagination controls (this will show them again)
+                updatePaginationControls();
             } else {
                 fileContainer.innerHTML = '<div class="error">Failed to load files</div>';
             }
@@ -225,7 +236,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = document.createElement('a');
             item.href = '#';
             item.className = 'breadcrumb-item' + (index === parts.length - 1 ? ' active' : '');
-            item.textContent = part;
+            
+            // Decrypt the folder name for display
+            try {
+                const decryptedName = decryptFolderName(part);
+                item.textContent = decryptedName;
+            } catch (error) {
+                console.error('Error decrypting folder name:', error);
+                item.textContent = part; // Fallback to original name
+            }
             
             // Only add click event if it's not the last item
             if (index !== parts.length - 1) {
@@ -237,6 +256,80 @@ document.addEventListener('DOMContentLoaded', () => {
             
             breadcrumbEl.appendChild(item);
         });
+    }
+    
+    // Update pagination controls
+    function updatePaginationControls() {
+        let paginationEl = document.getElementById('pagination-controls');
+        
+        // Create pagination container if it doesn't exist
+        if (!paginationEl) {
+            paginationEl = document.createElement('div');
+            paginationEl.id = 'pagination-controls';
+            paginationEl.className = 'pagination-controls';
+            
+            // Insert after the breadcrumb
+            const breadcrumb = document.getElementById('breadcrumb');
+            if (breadcrumb) {
+                breadcrumb.parentNode.insertBefore(paginationEl, breadcrumb.nextSibling);
+            } else {
+                // Fallback: insert before file container
+                fileContainer.parentNode.insertBefore(paginationEl, fileContainer);
+            }
+        }
+        
+        // Clear existing content
+        paginationEl.innerHTML = '';
+        
+        // Only show pagination if there are multiple pages
+        if (totalPages <= 1) {
+            paginationEl.style.display = 'none';
+            return;
+        }
+        
+        paginationEl.style.display = 'flex';
+        
+        // Previous button
+        if (currentPage > 1) {
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'btn pagination-btn';
+            prevBtn.innerHTML = '← Previous';
+            prevBtn.onclick = () => {
+                prevBtn.disabled = true;
+                prevBtn.innerHTML = '← Loading...';
+                loadFiles(null, currentPage - 1);
+            };
+            paginationEl.appendChild(prevBtn);
+        }
+        
+        // Page info
+        const pageInfo = document.createElement('span');
+        pageInfo.className = 'page-info';
+        pageInfo.innerHTML = `
+            <strong>Page ${currentPage} of ${totalPages}</strong>
+            <br>
+            <small>${totalFiles} total files</small>
+        `;
+        paginationEl.appendChild(pageInfo);
+        
+        // Next button
+        if (currentPage < totalPages) {
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'btn pagination-btn';
+            nextBtn.innerHTML = 'Next →';
+            nextBtn.onclick = () => {
+                nextBtn.disabled = true;
+                nextBtn.innerHTML = 'Loading... →';
+                loadFiles(null, currentPage + 1);
+            };
+            paginationEl.appendChild(nextBtn);
+        }
+        
+        // Page size info
+        const sizeInfo = document.createElement('span');
+        sizeInfo.className = 'size-info';
+        sizeInfo.innerHTML = `<small>${filesPerPage} files per page</small>`;
+        paginationEl.appendChild(sizeInfo);
     }
      // Display files in the gallery
     function displayFiles(files) {
@@ -281,7 +374,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const viewBtn = folderItem.querySelector('.view-btn');
             const deleteBtn = folderItem.querySelector('.delete-btn');
             
-            folderName.textContent = folder.name;
+            // Decrypt folder name for display
+            try {
+                const decryptedName = decryptFolderName(folder.name);
+                folderName.textContent = decryptedName;
+            } catch (error) {
+                console.error('Error decrypting folder name:', error);
+                folderName.textContent = folder.name; // Fallback to original name
+            }
             fileSize.textContent = 'Folder';
             
             // Set folder type for filtering
@@ -380,9 +480,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             fileContainer.appendChild(fileItem);
         });
-        
-        // Apply current filter
-        applyFilter(currentFilter);
     }
     
     // Load and decrypt thumbnail
@@ -444,10 +541,15 @@ document.addEventListener('DOMContentLoaded', () => {
     async function viewFile(file) {
         try {
             const previewContainer = document.getElementById('preview-container');
+            
+            // Show the modal immediately with loading state
+            previewModal.style.display = 'block';
             previewContainer.innerHTML = '<div class="loading">Loading...</div>';
             
-            // Show the modal
-            previewModal.style.display = 'block';
+            // Force reflow for animation
+            requestAnimationFrame(() => {
+                previewModal.style.opacity = '1';
+            });
             
             // Fetch the encrypted file
             const response = await fetch(file.path);
@@ -544,21 +646,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Apply filter function
-    function applyFilter(filter) {
-        const fileItems = document.querySelectorAll('.file-item');
-        
-        fileItems.forEach(item => {
-            const fileType = item.getAttribute('data-type');
-            
-            if (filter === 'all' || fileType === filter) {
-                item.style.display = '';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-    }
-    
     // Set up upload form
     function setupUploadForm() {
         const uploadForm = document.getElementById('upload-form');
@@ -621,22 +708,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
                 
                 if (data.success) {
-                    progressBar.style.width = '100%';
-                    uploadMessage.textContent = 'File uploaded successfully!';
-                    uploadMessage.className = 'message success';
-                    
-                    // Reset the form
+                    // Reset the form and close modal immediately
                     uploadForm.reset();
+                    uploadModal.style.display = 'none';
+                    uploadProgress.style.display = 'none';
+                    progressBar.style.width = '0';
                     
-                    // Close modal after a delay
-                    setTimeout(() => {
-                        uploadModal.style.display = 'none';
-                        uploadProgress.style.display = 'none';
-                        progressBar.style.width = '0';
-                        
-                        // Reload files
-                        loadFiles();
-                    }, 1500);
+                    // Reload files to show new upload
+                    loadFiles();
                 } else {
                     throw new Error(data.message || 'Upload failed');
                 }
@@ -698,12 +777,25 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Open upload modal
     function openUploadModal() {
-        document.getElementById('upload-form').reset();
-        document.getElementById('upload-message').textContent = '';
-        document.getElementById('upload-message').className = 'message';
-        document.getElementById('upload-progress').style.display = 'none';
-        document.getElementById('progress-bar').style.width = '0';
+        // Reset form state immediately
+        const uploadForm = document.getElementById('upload-form');
+        const uploadMessage = document.getElementById('upload-message');
+        const uploadProgress = document.getElementById('upload-progress');
+        const progressBar = document.getElementById('progress-bar');
+        
+        uploadForm.reset();
+        uploadMessage.textContent = '';
+        uploadMessage.className = 'message';
+        uploadProgress.style.display = 'none';
+        progressBar.style.width = '0';
+        
+        // Show modal immediately
         uploadModal.style.display = 'block';
+        
+        // Force reflow for animation
+        requestAnimationFrame(() => {
+            uploadModal.style.opacity = '1';
+        });
     }
     
     // Open create folder modal
@@ -714,16 +806,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         const folderModal = document.getElementById('folder-modal');
-        const folderNameInput = document.getElementById('folder-name');
+        const folderForm = document.getElementById('folder-form');
         const folderMessage = document.getElementById('folder-message');
+        const submitBtn = folderForm.querySelector('button[type="submit"]');
         
-        // Reset form
-        document.getElementById('folder-form').reset();
+        // Reset form state immediately
+        folderForm.reset();
         folderMessage.textContent = '';
         folderMessage.className = 'message';
         
-        // Show modal
+        // Reset button state
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Folder';
+        }
+        
+        // Show modal immediately
         folderModal.style.display = 'block';
+        
+        // Force reflow for animation and focus input
+        requestAnimationFrame(() => {
+            folderModal.style.opacity = '1';
+            const folderNameInput = document.getElementById('folder-name');
+            if (folderNameInput) {
+                folderNameInput.focus();
+            }
+        });
     }
     
     // Create folder modal HTML
@@ -754,12 +862,24 @@ document.addEventListener('DOMContentLoaded', () => {
         // Close button
         modal.querySelector('.close').addEventListener('click', () => {
             modal.style.display = 'none';
+            // Reset button state when closing modal
+            const submitBtn = modal.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Folder';
+            }
         });
         
         // Close modal when clicking outside
         window.addEventListener('click', (e) => {
             if (e.target === modal) {
                 modal.style.display = 'none';
+                // Reset button state when closing modal
+                const submitBtn = modal.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create Folder';
+                }
             }
         });
         
@@ -773,6 +893,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const folderName = document.getElementById('folder-name').value.trim();
         const folderMessage = document.getElementById('folder-message');
+        const submitBtn = e.target.querySelector('button[type="submit"]');
         
         if (!folderName) {
             folderMessage.textContent = 'Please enter a folder name';
@@ -787,10 +908,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        // Disable button immediately
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating...';
+        
         try {
-            folderMessage.textContent = 'Creating folder...';
-            folderMessage.className = 'message';
-            
             const response = await fetch('/api/folders', {
                 method: 'POST',
                 headers: {
@@ -805,23 +927,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             
             if (data.success) {
-                folderMessage.textContent = 'Folder created successfully!';
-                folderMessage.className = 'message success';
-                
-                // Close modal after delay
-                setTimeout(() => {
-                    document.getElementById('folder-modal').style.display = 'none';
-                    // Reload files to show new folder
-                    loadFiles();
-                }, 1000);
+                // Close modal immediately and reload files
+                document.getElementById('folder-modal').style.display = 'none';
+                loadFiles();
             } else {
                 folderMessage.textContent = data.message || 'Failed to create folder';
                 folderMessage.className = 'message error';
+                // Re-enable button on error
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Folder';
             }
         } catch (error) {
             console.error('Error creating folder:', error);
             folderMessage.textContent = 'Error creating folder';
             folderMessage.className = 'message error';
+            // Re-enable button on error
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Folder';
         }
     }
     

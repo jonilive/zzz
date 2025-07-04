@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test PIN Login</title>
+</head>
+<body>
+    <h1>Test PIN Login</h1>
+    <input type="text" id="pin-input" placeholder="Enter PIN" />
+    <button onclick="testLogin()">Test Login</button>
+    <div id="result"></div>
+    
+    <script>
+        async function testLogin() {
+            const pin = document.getElementById('pin-input').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!pin) {
+                resultDiv.innerHTML = '<p style="color: red;">Please enter a PIN</p>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ pin: pin })
+                });
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                if (data.success) {
+                    resultDiv.innerHTML += '<p style="color: green;">Login successful!</p>';
+                    resultDiv.innerHTML += `<p>PIN Hash: ${data.pinHash}</p>`;
+                } else {
+                    resultDiv.innerHTML += `<p style="color: red;">Login failed: ${data.message}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

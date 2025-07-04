@@ -284,6 +284,14 @@ const upload = multer({
     limits: { fileSize: 120 * 1024 * 1024 } // 120MB limit to account for encryption overhead
 });
 
+// Debug middleware to log raw request body
+app.use('/api/setup', (req, res, next) => {
+    console.log('Raw request headers:', req.headers);
+    console.log('Raw request body type:', typeof req.body);
+    console.log('Raw request body:', req.body);
+    next();
+});
+
 // Routes
 app.get('/', checkAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'index.html'));
@@ -307,6 +315,7 @@ app.get('/setup', (req, res) => {
 
 // API Routes
 app.post('/api/setup', async (req, res) => {
+    console.log('Setup request received:', req.body);
     const { pin } = req.body;
     
     if (!pin || pin.length < 4) {
@@ -321,7 +330,8 @@ app.post('/api/setup', async (req, res) => {
         // Save the hashed PIN in the hidden file in uploads folder
         fs.writeFileSync(PIN_FILE, JSON.stringify({ pin: hashedPin }));
         
-        res.json({ success: true, message: 'PIN set successfully' });
+        // Return the PIN hash so the client can use it for decryption
+        res.json({ success: true, message: 'PIN set successfully', pinHash: hashedPin });
     } catch (error) {
         console.error('Error setting PIN:', error);
         res.status(500).json({ success: false, message: 'Failed to set PIN' });
@@ -329,23 +339,34 @@ app.post('/api/setup', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
+    console.log('Login request received:', req.body);
     const { pin } = req.body;
     
     if (!pin) {
+        console.log('No PIN provided');
         return res.status(400).json({ success: false, message: 'PIN is required' });
     }
     
     try {
         // Read the saved hashed PIN from the hidden file
         const savedData = JSON.parse(fs.readFileSync(PIN_FILE));
+        console.log('Saved PIN hash:', savedData.pin);
+        console.log('Input PIN:', pin);
         
         // Compare the PINs
         const match = await bcrypt.compare(pin, savedData.pin);
+        console.log('PIN match:', match);
         
         if (match) {
             // Set authentication cookie (1 hour expiration)
             res.cookie('authenticated', true, { maxAge: 3600000, httpOnly: true });
-            res.json({ success: true, message: 'Authentication successful' });
+            
+            // Send the PIN hash to client for folder name decryption
+            res.json({ 
+                success: true, 
+                message: 'Authentication successful',
+                pinHash: savedData.pin
+            });
         } else {
             res.status(401).json({ success: false, message: 'Invalid PIN' });
         }
@@ -364,6 +385,8 @@ app.post('/api/logout', (req, res) => {
 app.get('/api/files', checkAuth, (req, res) => {
     try {
         const dirPath = req.query.path || '';
+        const page = parseInt(req.query.page) || 1;
+        const filesPerPage = parseInt(req.query.filesPerPage) || 20;
         const currentDir = path.join(UPLOADS_DIR, dirPath);
         
         // Ensure the path is within the uploads directory (prevent directory traversal)
@@ -376,9 +399,9 @@ app.get('/api/files', checkAuth, (req, res) => {
             return res.status(404).json({ success: false, message: 'Directory not found' });
         }
         
-        console.log(`Listing files in directory: ${currentDir}`);
+        console.log(`Listing files in directory: ${currentDir}, page: ${page}, filesPerPage: ${filesPerPage}`);
         
-        const files = fs.readdirSync(currentDir)
+        const allFiles = fs.readdirSync(currentDir)
             // Filter out hidden files (those starting with a dot)
             .filter(file => !file.startsWith('.'))
             .map(file => {
@@ -389,8 +412,6 @@ app.get('/api/files', checkAuth, (req, res) => {
                 
                 // Get the original name using our Caesar cipher
                 const originalName = getOriginalName(file);
-                
-                // console.log(`File: ${file} -> Decrypted: ${originalName}, isDir: ${isDirectory}`);
                 
                 return {
                     name: originalName,  // Display name (original)
@@ -404,12 +425,35 @@ app.get('/api/files', checkAuth, (req, res) => {
                 };
             });
         
+        // Separate folders and files
+        const folders = allFiles.filter(item => item.isDirectory);
+        const files = allFiles.filter(item => !item.isDirectory);
+        
+        // Sort folders by name and files by date (newest first)
+        folders.sort((a, b) => a.name.localeCompare(b.name));
+        files.sort((a, b) => new Date(b.mtime) - new Date(a.mtime));
+        
+        // Calculate pagination for files only (folders are always shown)
+        const totalFileCount = files.length;
+        const totalPages = Math.max(1, Math.ceil(totalFileCount / filesPerPage));
+        const startIndex = (page - 1) * filesPerPage;
+        const endIndex = startIndex + filesPerPage;
+        const paginatedFiles = files.slice(startIndex, endIndex);
+        
+        // Combine folders (always shown) with paginated files
+        const resultFiles = [...folders, ...paginatedFiles];
+        
+        console.log(`Total files: ${totalFileCount}, Total pages: ${totalPages}, Current page: ${page}, Files on this page: ${paginatedFiles.length}`);
+        
         // Add parent directory info if not in root
         const result = {
             success: true,
-            files,
+            files: resultFiles,
             currentPath: dirPath,
-            isRoot: dirPath === ''
+            isRoot: dirPath === '',
+            currentPage: page,
+            totalPages: totalPages,
+            totalFiles: allFiles.length
         };
         
         if (dirPath !== '') {

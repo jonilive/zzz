@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Crypto Functions</title>
+</head>
+<body>
+    <h1>Test Crypto Functions</h1>
+    <button onclick="testFunctions()">Test Functions</button>
+    <div id="result"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="/js/crypto.js"></script>
+    <script>
+        function testFunctions() {
+            const resultDiv = document.getElementById('result');
+            
+            // Test if CryptoJS is loaded
+            if (typeof CryptoJS === 'undefined') {
+                resultDiv.innerHTML = '<p style="color: red;">CryptoJS not loaded</p>';
+                return;
+            }
+            
+            // Test if generateEncryptionKey function exists
+            if (typeof generateEncryptionKey === 'undefined') {
+                resultDiv.innerHTML = '<p style="color: red;">generateEncryptionKey function not defined</p>';
+                return;
+            }
+            
+            // Test the function
+            generateEncryptionKey('1234').then(key => {
+                resultDiv.innerHTML = `<p style="color: green;">Success! Key: ${key}</p>`;
+            }).catch(error => {
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            });
+        }
+    </script>
+</body>
+</html>

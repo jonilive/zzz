@@ -15,7 +15,15 @@
             <form id="login-form" class="auth-form">
                 <div class="form-group">
                     <label for="pin">PIN:</label>
-                    <input type="password" id="pin" name="pin" placeholder="Enter PIN" required>
+                    <input type="password" 
+                           id="pin" 
+                           name="pin" 
+                           placeholder="Enter PIN" 
+                           required 
+                           minlength="4" 
+                           pattern="[0-9]{4,}" 
+                           inputmode="numeric"
+                           title="PIN must be at least 4 digits">
                 </div>
                 <div class="form-group">
                     <button type="submit" class="btn primary-btn">Login</button>
@@ -25,15 +33,42 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="/js/crypto.js"></script>
     <script>
+        // Add input validation for PIN (digits only)
+        document.getElementById('pin').addEventListener('input', function(e) {
+            // Remove any non-digit characters
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+        
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const pin = document.getElementById('pin').value;
             const message = document.getElementById('message');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            
+            // Additional validation
+            if (pin.length < 4) {
+                message.textContent = 'PIN must be at least 4 digits';
+                message.className = 'message error';
+                return;
+            }
+            
+            if (!/^\d+$/.test(pin)) {
+                message.textContent = 'PIN must contain only digits';
+                message.className = 'message error';
+                return;
+            }
+            
+            // Disable button immediately to prevent double-click
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logging in...';
             
             try {
+                console.log('Starting login request...');
+                
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: {
@@ -42,28 +77,43 @@
                     body: JSON.stringify({ pin })
                 });
                 
+                console.log('Login response status:', response.status);
                 const data = await response.json();
+                console.log('Login response data:', data);
                 
                 if (data.success) {
-                    message.textContent = 'Login successful. Redirecting...';
-                    message.className = 'message success';
+                    console.log('Login successful, generating encryption key...');
+                    
+                    // Check if CryptoJS is available
+                    if (typeof CryptoJS === 'undefined') {
+                        throw new Error('CryptoJS library not loaded');
+                    }
                     
                     // Generate encryption key from PIN and store it for the session
                     const encryptionKey = await generateEncryptionKey(pin);
                     sessionStorage.setItem('encryptionKey', encryptionKey);
                     
-                    // Redirect to gallery page after 1 second
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
+                    // Store the PIN hash from server response for folder name decryption
+                    if (data.pinHash) {
+                        sessionStorage.setItem('pinHash', data.pinHash);
+                    }
+                    
+                    // Redirect to gallery page immediately
+                    window.location.href = '/';
                 } else {
                     message.textContent = data.message || 'Invalid PIN';
                     message.className = 'message error';
+                    // Re-enable button on error
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Login';
                 }
             } catch (error) {
-                console.error('Error:', error);
-                message.textContent = 'An error occurred';
+                console.error('Login error:', error);
+                message.textContent = 'An error occurred: ' + error.message;
                 message.className = 'message error';
+                // Re-enable button on error
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Login';
             }
         });
     </script>
