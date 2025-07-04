@@ -53,7 +53,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Close modal buttons
     document.querySelectorAll('.modal .close').forEach(closeBtn => {
         closeBtn.addEventListener('click', () => {
-            closeBtn.closest('.modal').style.display = 'none';
+            const modal = closeBtn.closest('.modal');
+            
+            // Clean up blob URLs when closing preview modal
+            if (modal === previewModal) {
+                cleanupPreviewModal();
+            }
+            
+            modal.style.display = 'none';
         });
     });
     
@@ -63,9 +70,30 @@ document.addEventListener('DOMContentLoaded', () => {
             uploadModal.style.display = 'none';
         }
         if (e.target === previewModal) {
+            cleanupPreviewModal();
             previewModal.style.display = 'none';
         }
     });
+    
+    // Function to clean up blob URLs in preview modal
+    function cleanupPreviewModal() {
+        const previewContainer = document.getElementById('preview-container');
+        
+        // Find any video elements with stored object URLs
+        const videos = previewContainer.querySelectorAll('video[data-object-url]');
+        videos.forEach(video => {
+            const objectURL = video.getAttribute('data-object-url');
+            if (objectURL) {
+                URL.revokeObjectURL(objectURL);
+            }
+        });
+        
+        // Find any links with blob URLs
+        const links = previewContainer.querySelectorAll('a[href^="blob:"]');
+        links.forEach(link => {
+            URL.revokeObjectURL(link.href);
+        });
+    }
     
     // Setup upload form
     setupUploadForm();
@@ -392,7 +420,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 video.src = objectURL;
                 video.controls = true;
                 video.autoplay = true;
-                video.oncanplay = () => URL.revokeObjectURL(objectURL); // Clean up when can play
+                
+                // Store the URL for cleanup when modal is closed
+                video.setAttribute('data-object-url', objectURL);
+                
+                // Clean up URL when video ends or when modal is closed
+                video.addEventListener('ended', () => {
+                    URL.revokeObjectURL(objectURL);
+                });
+                
                 previewContainer.appendChild(video);
             } else {
                 // For other file types, show download link
