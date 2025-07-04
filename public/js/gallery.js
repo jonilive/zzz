@@ -79,13 +79,27 @@ document.addEventListener('DOMContentLoaded', () => {
     function cleanupPreviewModal() {
         const previewContainer = document.getElementById('preview-container');
         
-        // Find any video elements with stored object URLs
-        const videos = previewContainer.querySelectorAll('video[data-object-url]');
+        // Find any video elements and stop them
+        const videos = previewContainer.querySelectorAll('video');
         videos.forEach(video => {
+            // Pause the video
+            video.pause();
+            
+            // Reset video to beginning
+            video.currentTime = 0;
+            
+            // Clear the video source to stop any buffering
+            video.src = '';
+            video.load(); // Force reload to clear buffer
+            
+            // Clean up blob URL if it exists
             const objectURL = video.getAttribute('data-object-url');
             if (objectURL) {
                 URL.revokeObjectURL(objectURL);
             }
+            
+            // Remove the video element completely
+            video.remove();
         });
         
         // Find any links with blob URLs
@@ -93,6 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
         links.forEach(link => {
             URL.revokeObjectURL(link.href);
         });
+        
+        // Clear the entire preview container to ensure everything is removed
+        previewContainer.innerHTML = '';
     }
     
     // Setup upload form
@@ -100,6 +117,21 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Handle drag and drop
     setupDragDrop();
+    
+    // Clean up blob URLs when page unloads
+    window.addEventListener('beforeunload', () => {
+        // Clean up thumbnail blob URLs
+        const thumbnails = document.querySelectorAll('[data-thumbnail-url]');
+        thumbnails.forEach(thumbnail => {
+            const url = thumbnail.getAttribute('data-thumbnail-url');
+            if (url) {
+                URL.revokeObjectURL(url);
+            }
+        });
+        
+        // Clean up preview modal blob URLs
+        cleanupPreviewModal();
+    });
     
     // Load files function
     async function loadFiles(path = null) {
@@ -206,15 +238,23 @@ document.addEventListener('DOMContentLoaded', () => {
             breadcrumbEl.appendChild(item);
         });
     }
-    
-    // Display files in the gallery
+     // Display files in the gallery
     function displayFiles(files) {
         if (files.length === 0) {
             fileContainer.innerHTML = '<div class="loading">No files found</div>';
             // No need for the create folder button here as we have it in the header
             return;
         }
-        
+
+        // Clean up any existing thumbnail blob URLs before loading new ones
+        const existingThumbnails = fileContainer.querySelectorAll('[data-thumbnail-url]');
+        existingThumbnails.forEach(thumbnail => {
+            const url = thumbnail.getAttribute('data-thumbnail-url');
+            if (url) {
+                URL.revokeObjectURL(url);
+            }
+        });
+
         fileContainer.innerHTML = '';
         
         // We've moved the "New Folder" button to the header
@@ -364,12 +404,33 @@ document.addEventListener('DOMContentLoaded', () => {
             // Create URL for the decrypted blob
             const objectURL = URL.createObjectURL(decryptedBlob);
             
+            // Store the object URL for cleanup
+            thumbnailEl.setAttribute('data-thumbnail-url', objectURL);
+            
             // Set as background image
             thumbnailEl.style.backgroundImage = `url(${objectURL})`;
             thumbnailEl.classList.remove('loading');
             
-            // Clean up
-            // We don't revoke the URL here because we want to keep the thumbnail visible
+            // Clean up blob URL when image loads (convert to data URL for better memory management)
+            const img = new Image();
+            img.onload = () => {
+                // Create a canvas to convert blob to data URL
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                
+                // Convert to data URL and update thumbnail
+                const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+                thumbnailEl.style.backgroundImage = `url(${dataURL})`;
+                
+                // Clean up blob URL
+                URL.revokeObjectURL(objectURL);
+                thumbnailEl.removeAttribute('data-thumbnail-url');
+            };
+            img.src = objectURL;
+            
         } catch (error) {
             console.error('Error loading thumbnail:', error);
             thumbnailEl.classList.remove('loading');
