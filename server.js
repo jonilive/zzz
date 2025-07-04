@@ -22,8 +22,8 @@ console.log(`ZZZ will run on port: ${port}`);
 app.set('strict routing', false);
 
 // Middleware
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({ limit: '120mb' })); // Allow for encrypted file overhead
+app.use(bodyParser.urlencoded({ extended: true, limit: '120mb' }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -281,7 +281,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
     storage: storage,
-    limits: { fileSize: 100 * 1024 * 1024 } // 100MB file size limit
+    limits: { fileSize: 120 * 1024 * 1024 } // 120MB limit to account for encryption overhead
 });
 
 // Routes

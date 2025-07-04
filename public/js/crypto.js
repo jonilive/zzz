@@ -30,11 +30,26 @@ async function encryptFile(file, encryptionKey) {
         
         reader.onload = function(e) {
             try {
-                const wordArray = CryptoJS.lib.WordArray.create(e.target.result);
-                const encrypted = CryptoJS.AES.encrypt(wordArray, encryptionKey).toString();
+                const arrayBuffer = e.target.result;
+                const uint8Array = new Uint8Array(arrayBuffer);
+                
+                // For large files, we need to process in chunks to avoid "Invalid array length" errors
+                const chunkSize = 1024 * 1024; // 1MB chunks
+                const chunks = [];
+                
+                // Process file in chunks
+                for (let i = 0; i < uint8Array.length; i += chunkSize) {
+                    const chunk = uint8Array.slice(i, i + chunkSize);
+                    const wordArray = CryptoJS.lib.WordArray.create(chunk);
+                    const encryptedChunk = CryptoJS.AES.encrypt(wordArray, encryptionKey).toString();
+                    chunks.push(encryptedChunk);
+                }
+                
+                // Combine all encrypted chunks with a delimiter
+                const encryptedData = chunks.join('|||CHUNK|||');
                 
                 // Create a new file with encrypted content
-                const encryptedBlob = new Blob([encrypted], { type: 'application/encrypted' });
+                const encryptedBlob = new Blob([encryptedData], { type: 'application/encrypted' });
                 resolve(encryptedBlob);
             } catch (error) {
                 reject(error);
@@ -52,14 +67,38 @@ async function encryptFile(file, encryptionKey) {
 // Decrypt file data with the encryption key
 async function decryptFile(encryptedData, encryptionKey, mimeType) {
     try {
-        // Decrypt the data
-        const decrypted = CryptoJS.AES.decrypt(encryptedData, encryptionKey);
-        
-        // Convert WordArray to string (binary)
-        const typedArray = convertWordArrayToUint8Array(decrypted);
-        
-        // Create a blob with the original mime type
-        return new Blob([typedArray], { type: mimeType || 'application/octet-stream' });
+        // Check if this is chunked encrypted data
+        if (encryptedData.includes('|||CHUNK|||')) {
+            // Handle chunked decryption
+            const chunks = encryptedData.split('|||CHUNK|||');
+            const decryptedChunks = [];
+            
+            for (const chunk of chunks) {
+                const decrypted = CryptoJS.AES.decrypt(chunk, encryptionKey);
+                const typedArray = convertWordArrayToUint8Array(decrypted);
+                decryptedChunks.push(typedArray);
+            }
+            
+            // Combine all decrypted chunks
+            const totalLength = decryptedChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+            const combinedArray = new Uint8Array(totalLength);
+            let offset = 0;
+            
+            for (const chunk of decryptedChunks) {
+                combinedArray.set(chunk, offset);
+                offset += chunk.length;
+            }
+            
+            // Create a blob with the original mime type
+            return new Blob([combinedArray], { type: mimeType || 'application/octet-stream' });
+        } else {
+            // Handle legacy single-chunk decryption
+            const decrypted = CryptoJS.AES.decrypt(encryptedData, encryptionKey);
+            const typedArray = convertWordArrayToUint8Array(decrypted);
+            
+            // Create a blob with the original mime type
+            return new Blob([typedArray], { type: mimeType || 'application/octet-stream' });
+        }
     } catch (error) {
         console.error('Decryption error:', error);
         throw new Error('Failed to decrypt file. Incorrect PIN or corrupted data.');
