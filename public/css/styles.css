@@ -183,7 +183,9 @@ input:focus {
 
 /* Modal form buttons - make them full width like auth forms */
 .modal .form .btn,
-.modal .form button[type="submit"] {
+.modal .form button[type="submit"],
+.modal .upload-form .btn,
+.modal .upload-form button[type="submit"] {
     width: 100%;
 }
 

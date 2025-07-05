@@ -4,19 +4,26 @@ A secure, self-hosted file gallery application with client-side encryption and P
 
 ## 🔐 Security Features
 
-- **Client-side encryption/decryption** - Files are encrypted in your browser before upload
-- **PIN authentication** - Secure access control
-- **Filename obfuscation** - Original filenames are encrypted on the server
+- **Client-side encryption/decryption** - Files are encrypted in your browser before upload using chunked encryption for large files
+- **PIN authentication** - Secure access control with 4+ digit PIN requirement
+- **Filename obfuscation** - Original filenames are encrypted on the server using Caesar cipher
 - **No server-side key storage** - Keys are derived from your PIN and never stored
+- **Secure file handling** - Robust error handling and validation for file operations
+- **Session management** - Automatic cleanup of decrypted data on logout
 
 ## ✨ Features
 
 - 📱 **Responsive design** - Works perfectly on mobile devices
 - 🖼️ **Media support** - View images and videos directly in the browser
 - 📁 **Folder organization** - Create and navigate through folders
-- ⬆️ **File upload** - Support for files up to 100MB
-- 🗑️ **File management** - Upload, view, and delete files
+- ⬆️ **Multi-file upload** - Support for uploading up to 50 files at once (100MB per file)
+- 🗂️ **Pagination** - Efficient handling of large file libraries (20 files per page)
+- 📄 **Drag & drop** - Intuitive file upload interface
+- 🔍 **File preview** - Instant preview of images and videos
+- 🗑️ **File management** - Upload, view, and delete files and folders
 - 🔒 **Session security** - Automatic logout and session management
+- 🚀 **Memory optimization** - Efficient handling of large files and thumbnails
+- 📲 **Mobile-optimized** - Full-width buttons and touch-friendly interface
 
 ## 🚀 Quick Start with Docker
 
@@ -82,9 +89,31 @@ If the community application isn't available yet:
 ### Initial Setup
 
 1. Access the web interface at `http://your-server:3000`
-2. You'll be prompted to set up an initial PIN
+2. You'll be prompted to set up an initial PIN (minimum 4 digits)
 3. Remember your PIN - it cannot be recovered if lost!
 4. Start uploading and organizing your files
+
+### Usage Tips
+
+- **Multi-file uploads**: Select multiple files or drag & drop up to 50 files at once
+- **Large files**: Files up to 100MB are supported per file
+- **Pagination**: Navigate through large collections with 20 files per page
+- **Mobile usage**: Full-width buttons and optimized touch interface
+- **File organization**: Create folders to organize your encrypted files
+- **Instant preview**: Click on images and videos for immediate viewing
+
+## 🚀 Recent Improvements
+
+### Version 2.0 Features
+
+- **Multi-file upload support** - Upload up to 50 files simultaneously
+- **Improved pagination** - Better handling of large file libraries
+- **Enhanced mobile experience** - Optimized UI for mobile devices
+- **Better error handling** - More robust file upload with detailed error messages
+- **Memory optimization** - Efficient handling of thumbnails and large files
+- **Instant UI feedback** - Immediate modal transitions and button states
+- **Chunked encryption** - Better performance for large file encryption
+- **Improved PIN validation** - Real-time validation with mobile-friendly input
 
 ## 🏗️ Development
 

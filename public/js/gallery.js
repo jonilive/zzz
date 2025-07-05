@@ -657,18 +657,26 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const file = fileInput.files[0];
+            const files = Array.from(fileInput.files);
             
-            if (!file) {
-                uploadMessage.textContent = 'Please select a file';
+            if (files.length === 0) {
+                uploadMessage.textContent = 'Please select at least one file';
                 uploadMessage.className = 'message error';
                 return;
             }
             
-            // Check file size limit (100MB)
+            // Check file count limit (50 files max)
+            if (files.length > 50) {
+                uploadMessage.textContent = `Too many files selected. Maximum 50 files allowed per upload, you selected ${files.length} files.`;
+                uploadMessage.className = 'message error';
+                return;
+            }
+            
+            // Check file size limit (100MB per file)
             const maxSizeBytes = 100 * 1024 * 1024;
-            if (file.size > maxSizeBytes) {
-                uploadMessage.textContent = 'File size exceeds the 100MB limit';
+            const oversizedFiles = files.filter(file => file.size > maxSizeBytes);
+            if (oversizedFiles.length > 0) {
+                uploadMessage.textContent = `${oversizedFiles.length} file(s) exceed the 100MB limit per file`;
                 uploadMessage.className = 'message error';
                 return;
             }
@@ -678,22 +686,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 uploadProgress.style.display = 'block';
                 progressBar.style.width = '10%';
                 
-                uploadMessage.textContent = 'Encrypting file...';
+                uploadMessage.textContent = `Encrypting ${files.length} file(s)...`;
                 uploadMessage.className = 'message';
-                
-                // Encrypt the file
-                const encryptedFile = await encryptFile(file, encryptionKey);
-                
-                progressBar.style.width = '50%';
-                uploadMessage.textContent = 'Uploading encrypted file...';
                 
                 // Create form data
                 const formData = new FormData();
-                formData.append('file', encryptedFile, file.name);
+                
+                // Encrypt and add each file to form data
+                let encryptedCount = 0;
+                for (const file of files) {
+                    const encryptedFile = await encryptFile(file, encryptionKey);
+                    formData.append('files', encryptedFile, file.name);
+                    
+                    encryptedCount++;
+                    const encryptProgress = 10 + (encryptedCount / files.length) * 40; // 10% to 50%
+                    progressBar.style.width = `${encryptProgress}%`;
+                }
+                
                 // Add current path to form data
                 formData.append('currentPath', currentPath);
                 
-                // Upload the encrypted file
+                progressBar.style.width = '60%';
+                uploadMessage.textContent = `Uploading ${files.length} encrypted file(s)...`;
+                
+                // Upload the encrypted files
                 const response = await fetch('/api/upload', {
                     method: 'POST',
                     body: formData
@@ -701,29 +717,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 progressBar.style.width = '90%';
                 
-                if (!response.ok) {
-                    throw new Error('Upload failed');
-                }
-                
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Reset the form and close modal immediately
-                    uploadForm.reset();
-                    uploadModal.style.display = 'none';
-                    uploadProgress.style.display = 'none';
-                    progressBar.style.width = '0';
+                    progressBar.style.width = '100%';
+                    uploadMessage.textContent = data.message;
+                    uploadMessage.className = 'message success';
                     
-                    // Reload files to show new upload
-                    loadFiles();
+                    // Reset the form and close modal after a brief delay
+                    setTimeout(() => {
+                        uploadForm.reset();
+                        uploadModal.style.display = 'none';
+                        uploadProgress.style.display = 'none';
+                        progressBar.style.width = '0';
+                        uploadMessage.textContent = '';
+                        uploadMessage.className = 'message';
+                        
+                        // Reset the drop area text
+                        const dropText = document.querySelector('#drop-area p');
+                        if (dropText) {
+                            dropText.textContent = 'Drag & drop files here or click to browse';
+                        }
+                        
+                        // Reload files to show new uploads
+                        loadFiles();
+                    }, 1500);
                 } else {
                     throw new Error(data.message || 'Upload failed');
                 }
             } catch (error) {
                 console.error('Error during upload:', error);
-                uploadMessage.textContent = error.message || 'Error uploading file';
+                uploadMessage.textContent = error.message || 'Error uploading files';
                 uploadMessage.className = 'message error';
                 uploadProgress.style.display = 'none';
+                progressBar.style.width = '0';
             }
         });
     }
@@ -732,6 +759,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupDragDrop() {
         const dropArea = document.getElementById('drop-area');
         const fileInput = document.getElementById('file-input');
+        
+        // Add file input change listener to show selected files count
+        fileInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            const dropText = dropArea.querySelector('p');
+            
+            if (files.length === 0) {
+                dropText.textContent = 'Drag & drop files here or click to browse';
+            } else if (files.length === 1) {
+                dropText.textContent = `1 file selected: ${files[0].name}`;
+            } else {
+                dropText.textContent = `${files.length} files selected`;
+            }
+        });
         
         // Prevent default drag behaviors
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -770,7 +811,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const files = dt.files;
             
             if (files.length > 0) {
-                fileInput.files = files;
+                // Create a new FileList-like object and assign it to the input
+                const fileList = Array.from(files);
+                
+                // Create a new DataTransfer object and add files to it
+                const dataTransfer = new DataTransfer();
+                fileList.forEach(file => dataTransfer.items.add(file));
+                
+                // Assign the files to the input
+                fileInput.files = dataTransfer.files;
+                
+                // Update the drop area text to show number of files selected
+                const dropText = dropArea.querySelector('p');
+                if (dropText && files.length > 1) {
+                    dropText.textContent = `${files.length} files selected`;
+                }
             }
         }
     }
@@ -788,6 +843,12 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadMessage.className = 'message';
         uploadProgress.style.display = 'none';
         progressBar.style.width = '0';
+        
+        // Reset the drop area text
+        const dropText = document.querySelector('#drop-area p');
+        if (dropText) {
+            dropText.textContent = 'Drag & drop files here or click to browse';
+        }
         
         // Show modal immediately
         uploadModal.style.display = 'block';

@@ -42,7 +42,6 @@ console.log(`Using uploads directory: ${UPLOADS_DIR}`);
 // Ensure uploads directory exists
 if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-    console.log(`Created uploads directory: ${UPLOADS_DIR}`);
 }
 
 // Check if PIN is set
@@ -67,14 +66,12 @@ function getPinKey() {
     
     const pinFile = path.join(UPLOADS_DIR, '.pin');
     if (!fs.existsSync(pinFile)) {
-        // console.log('No PIN file found, using default key');
         return defaultKey;
     }
     
     try {
         const pinData = JSON.parse(fs.readFileSync(pinFile, 'utf8'));
         if (!pinData || !pinData.pin) {
-            // console.log('Invalid PIN file format, using default key');
             return defaultKey;
         }
         
@@ -84,7 +81,6 @@ function getPinKey() {
         
         // If the hash is too short, use default key
         if (hash.length < 10) {
-            // console.log('PIN hash too short, using default key');
             return defaultKey;
         }
         
@@ -96,7 +92,6 @@ function getPinKey() {
             return (hash.charCodeAt(pos) % 25) + 1;
         });
         
-        // console.log('Generated cipher key from PIN:', key);
         return key;
     } catch (err) {
         console.error('Error reading PIN file:', err);
@@ -138,46 +133,6 @@ function caesarCipher(text, key, encrypt = true) {
         return alphabet[newPos];
     }).join('');
 }
-
-// Test our cipher to ensure it works correctly
-function testCipher() {
-    const key = [5, 10, 15, 20];
-    
-    // Test a variety of filenames
-    const testCases = [
-        "hello-world_123",
-        "photo.jpg",
-        "document with spaces.pdf",
-        "special_chars!@#.txt",
-        "folder.name"
-    ];
-    
-    // console.log("Caesar Cipher Tests:");
-    
-    // Test function disabled for security - prevents exposing cipher operations in logs
-    /*
-    testCases.forEach(testStr => {
-        // Test the full obfuscation/deobfuscation process
-        const obfuscated = obfuscateFileName(testStr);
-        const deobfuscated = getOriginalName(obfuscated);
-        
-        // We need to check if the base names match, ignoring case
-        // since our cipher normalizes to lowercase
-        const originalBaseName = path.basename(testStr, path.extname(testStr)).toLowerCase();
-        const deobfuscatedBaseName = path.basename(deobfuscated, path.extname(deobfuscated));
-        
-        console.log("--------------------");
-        console.log("Original:", testStr);
-        console.log("Obfuscated:", obfuscated);
-        console.log("Deobfuscated:", deobfuscated);
-        console.log("Extensions match:", path.extname(testStr) === path.extname(deobfuscated));
-        console.log("Basenames match:", originalBaseName === deobfuscatedBaseName);
-    });
-    */
-}
-
-// Run the test on startup
-// testCipher(); // Disabled for security - prevents exposing cipher operations in logs
 
 // Name obfuscation and deobfuscation functions
 function obfuscateFileName(originalName) {
@@ -228,8 +183,6 @@ function getOriginalName(obfuscatedName) {
         // Decrypt the name
         const decryptedName = caesarCipher(encryptedName, key, false);
         
-        // console.log(`Decrypting filename: ${obfuscatedName} -> ${decryptedName + extension}`);
-        
         return decryptedName + extension;
     } catch (err) {
         console.error('Error decrypting filename:', err, obfuscatedName);
@@ -268,20 +221,25 @@ function checkAuth(req, res, next) {
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         // Always upload to the root uploads directory first
-        console.log('Initial upload destination:', UPLOADS_DIR);
         cb(null, UPLOADS_DIR);
     },
     filename: (req, file, cb) => {
         // Generate an obfuscated filename using our Caesar cipher
         const obfuscatedName = obfuscateFileName(file.originalname);
-        // console.log(`Generating obfuscated filename: ${file.originalname} -> ${obfuscatedName}`);
         cb(null, obfuscatedName);
     }
 });
 
 const upload = multer({ 
     storage: storage,
-    limits: { fileSize: 120 * 1024 * 1024 } // 120MB limit to account for encryption overhead
+    limits: { 
+        fileSize: 120 * 1024 * 1024, // 120MB limit to account for encryption overhead
+        files: 50, // Allow up to 50 files in a single upload
+        fields: 100, // Allow up to 100 fields (needed for multiple file uploads)
+        fieldNameSize: 100, // Field name size limit
+        fieldSize: 2 * 1024 * 1024, // Field size limit (2MB)
+        parts: 200 // Max number of parts in multipart request
+    }
 });
 
 // Routes
@@ -385,8 +343,6 @@ app.get('/api/files', checkAuth, (req, res) => {
             return res.status(404).json({ success: false, message: 'Directory not found' });
         }
         
-        console.log(`Listing files in directory: ${currentDir}, page: ${page}, filesPerPage: ${filesPerPage}`);
-        
         const allFiles = fs.readdirSync(currentDir)
             // Filter out hidden files (those starting with a dot)
             .filter(file => !file.startsWith('.'))
@@ -429,8 +385,6 @@ app.get('/api/files', checkAuth, (req, res) => {
         // Combine folders (always shown) with paginated files
         const resultFiles = [...folders, ...paginatedFiles];
         
-        console.log(`Total files: ${totalFileCount}, Total pages: ${totalPages}, Current page: ${page}, Files on this page: ${paginatedFiles.length}`);
-        
         // Add parent directory info if not in root
         const result = {
             success: true,
@@ -454,62 +408,103 @@ app.get('/api/files', checkAuth, (req, res) => {
     }
 });
 
-// Simpler approach for file uploads
-app.post('/api/upload', checkAuth, upload.single('file'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ success: false, message: 'No file uploaded' });
-    }
-    
-    try {
-        // Get the current path from request body
-        const currentPath = req.body.currentPath || '';
-        const originalName = req.file.originalname;
-        const obfuscatedName = req.file.filename;
-        
-        console.log('File upload details:');
-        console.log('- Original name:', originalName);
-        console.log('- Obfuscated name:', obfuscatedName);
-        console.log('- Current path from form:', currentPath);
-        console.log('- Initial upload path:', req.file.path);
-        
-        // No need to store mapping with our Caesar cipher approach
-        
-        // If currentPath is specified, move the file to the correct subdirectory
-        let finalPath = req.file.path; // Default to current location
-        let relativePath = obfuscatedName; // Default relative path
-        
-        if (currentPath) {
-            // Create the target directory if it doesn't exist
-            const targetDir = path.join(UPLOADS_DIR, currentPath);
-            ensureDirectoryExists(targetDir);
+// Simpler approach for file uploads - now supports multiple files
+app.post('/api/upload', checkAuth, (req, res) => {
+    // Handle Multer upload with custom error handling
+    upload.array('files', 50)(req, res, (err) => {
+        if (err) {
+            console.error('Multer upload error:', err);
             
-            // Set the final path
-            finalPath = path.join(targetDir, obfuscatedName);
-            relativePath = path.join(currentPath, obfuscatedName).replace(/\\/g, '/');
-            
-            // Move the file from root uploads to the subfolder
-            if (req.file.path !== finalPath) {
-                fs.renameSync(req.file.path, finalPath);
-                console.log(`Moved file from ${req.file.path} to ${finalPath}`);
+            if (err instanceof multer.MulterError) {
+                if (err.code === 'LIMIT_FILE_COUNT') {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: 'Too many files. Maximum 50 files allowed per upload.' 
+                    });
+                } else if (err.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: 'File too large. Maximum file size is 120MB.' 
+                    });
+                } else if (err.code === 'LIMIT_FIELD_COUNT') {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: 'Too many fields in the request.' 
+                    });
+                } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: 'Unexpected file field in the request.' 
+                    });
+                } else {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: `Upload error: ${err.message}` 
+                    });
+                }
+            } else {
+                return res.status(500).json({ 
+                    success: false, 
+                    message: 'Server error during upload' 
+                });
             }
         }
         
-        res.json({ 
-            success: true, 
-            message: 'File uploaded successfully',
-            file: {
+        // If no error, proceed with upload processing
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ success: false, message: 'No files uploaded' });
+        }
+        
+        try {
+        // Get the current path from request body
+        const currentPath = req.body.currentPath || '';
+        const uploadedFiles = [];
+        
+        // Process each uploaded file
+        for (const file of req.files) {
+            const originalName = file.originalname;
+            const obfuscatedName = file.filename;
+            
+            // If currentPath is specified, move the file to the correct subdirectory
+            let finalPath = file.path; // Default to current location
+            let relativePath = obfuscatedName; // Default relative path
+            
+            if (currentPath) {
+                // Create the target directory if it doesn't exist
+                const targetDir = path.join(UPLOADS_DIR, currentPath);
+                ensureDirectoryExists(targetDir);
+                
+                // Set the final path
+                finalPath = path.join(targetDir, obfuscatedName);
+                relativePath = path.join(currentPath, obfuscatedName).replace(/\\/g, '/');
+                
+                // Move the file from root uploads to the subfolder
+                if (file.path !== finalPath) {
+                    fs.renameSync(file.path, finalPath);
+                }
+            }
+            
+            // Add to uploaded files array
+            uploadedFiles.push({
                 name: originalName,
                 obfuscatedName: obfuscatedName,
                 path: `/uploads/${relativePath}`,
                 relativePath: relativePath,
-                size: req.file.size,
+                size: file.size,
                 type: path.extname(originalName).substr(1)
-            }
+            });
+        }
+        
+        res.json({ 
+            success: true, 
+            message: `${uploadedFiles.length} file(s) uploaded successfully`,
+            files: uploadedFiles
         });
     } catch (error) {
         console.error('Error handling file upload:', error);
-        res.status(500).json({ success: false, message: 'Error processing uploaded file' });
+        res.status(500).json({ success: false, message: 'Error processing uploaded files' });
     }
+    }); // Close the upload middleware callback
 });
 
 app.delete('/api/files', checkAuth, (req, res) => {
@@ -574,9 +569,6 @@ app.post('/api/folders', checkAuth, (req, res) => {
         
         // Create the directory
         ensureDirectoryExists(dirPath);
-        
-        // Add a log for debugging
-        console.log(`Folder created: ${name} -> ${obfuscatedName} in ${currentPath}`);
         
         res.json({ 
             success: true, 
